@@ -1,1 +1,44 @@
-[]
+[
+  {
+    "id": "entidades-relaciones-pk-fk",
+    "name": "Entidades, relaciones, PK y FK",
+    "moduleId": "module-01",
+    "prerequisites": []
+  },
+  {
+    "id": "precio-historico",
+    "name": "Preservar valores históricos frente a datos maestros mutables",
+    "moduleId": "module-01",
+    "prerequisites": ["entidades-relaciones-pk-fk"]
+  },
+  {
+    "id": "normalizacion-3fn",
+    "name": "Normalización sin dogma (1FN/2FN/3FN y cuándo desnormalizar)",
+    "moduleId": "module-01",
+    "prerequisites": ["entidades-relaciones-pk-fk"]
+  },
+  {
+    "id": "kardex-costo-promedio",
+    "name": "Kárdex como libro contable inmutable y costo promedio ponderado",
+    "moduleId": "module-01",
+    "prerequisites": ["normalizacion-3fn"]
+  },
+  {
+    "id": "race-condition-lectura-escritura",
+    "name": "Condiciones de carrera entre lectura y escritura concurrente",
+    "moduleId": "module-01",
+    "prerequisites": ["kardex-costo-promedio"]
+  },
+  {
+    "id": "multi-tenancy-tenant-id",
+    "name": "Estrategias de multi-tenancy y su costo real para una PyME",
+    "moduleId": "module-01",
+    "prerequisites": ["entidades-relaciones-pk-fk"]
+  },
+  {
+    "id": "comunicacion-costo-riesgo-negocio",
+    "name": "Traducir costo técnico a riesgo de negocio frente al cliente",
+    "moduleId": "module-01",
+    "prerequisites": ["precio-historico", "kardex-costo-promedio", "multi-tenancy-tenant-id"]
+  }
+]

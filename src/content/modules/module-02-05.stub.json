@@ -1,0 +1,34 @@
+[
+  {
+    "id": "module-02",
+    "order": 2,
+    "title": "Concurrencia y consistencia bajo carga real",
+    "clientContext": "Distribuidora El Sol crece: ahora hay dos vendedores despachando al mismo tiempo desde la bodega. Marta empieza a ver descuadres de inventario que no existían cuando solo ella tocaba el sistema.",
+    "lessons": [],
+    "isStub": true
+  },
+  {
+    "id": "module-03",
+    "order": 3,
+    "title": "APIs y contratos entre sistemas",
+    "clientContext": "Marta quiere conectar su sistema con la pasarela de pagos de un banco y con el sistema de facturación electrónica de la DIAN. El motor debe soportar contratos de API sin acoplarse a un proveedor específico.",
+    "lessons": [],
+    "isStub": true
+  },
+  {
+    "id": "module-04",
+    "order": 4,
+    "title": "Escalar sin sobre-construir",
+    "clientContext": "Un cliente de El Sol le pregunta a Marta si su proveedor de software \"aguanta crecer\". El módulo explora cuándo vale la pena invertir en escalabilidad y cuándo es sobre-ingeniería prematura.",
+    "lessons": [],
+    "isStub": true
+  },
+  {
+    "id": "module-05",
+    "order": 5,
+    "title": "Seguridad y permisos que no estorban",
+    "clientContext": "Marta contrata a su primer empleado de bodega y necesita que vea el inventario pero no los precios de costo ni las utilidades. El módulo cubre control de acceso sin paralizar el trabajo diario.",
+    "lessons": [],
+    "isStub": true
+  }
+]

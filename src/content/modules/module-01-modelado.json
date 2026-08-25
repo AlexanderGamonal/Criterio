@@ -1,0 +1,353 @@
+{
+  "id": "module-01",
+  "order": 1,
+  "title": "De Excel a un modelo que aguanta",
+  "clientContext": "Marta Restrepo dirige Distribuidora El Sol, vende insumos de aseo a tiendas de barrio. Lleva el negocio en un Excel de 14 pestañas. Hace un mes cambió el precio de un producto y el archivo recalculó ventas de meses anteriores: cobró de menos en una factura, perdió 2.3 millones de pesos y la confianza de un cliente grande.",
+  "lessons": [
+    {
+      "id": "l1-de-excel-a-tablas",
+      "title": "De Excel a tablas",
+      "narrative": "Un Excel guarda valores. Una base de datos guarda relaciones entre entidades, y esas relaciones son las que evitan que un dato cambie por accidente en todos los lugares donde aparece.\n\nEn el Excel de Marta, cada fila de la pestaña \"Ventas\" tiene una columna que trae el precio directamente de la pestaña \"Productos\" con una fórmula. Cuando el precio del producto cambió, la fórmula recalculó automáticamente TODAS las filas que lo referenciaban, incluidas facturas de meses anteriores. Eso le costó 2.3 millones.\n\nUna tabla relacional resuelve esto con dos ideas: una **llave primaria (PK)** identifica de forma única cada fila de una tabla, y una **llave foránea (FK)** conecta una fila de una tabla con una fila de otra. Pero conectar dos tablas con una FK no es lo mismo que copiar un valor: una FK a `productos` te da el precio *actual* del producto, no el precio que pagó el cliente el día de la venta. Si necesitas ese segundo dato, tiene que vivir en su propia columna, en la tabla de la venta.",
+      "concepts": ["entidades-relaciones-pk-fk", "precio-historico"],
+      "exercises": [
+        {
+          "id": "l1-schema-ventas",
+          "type": "schema-forge",
+          "title": "Modelar productos, clientes y ventas",
+          "prompt": "Modela el negocio de Marta con al menos cuatro tablas: productos, clientes, ventas y el detalle de cada venta (los productos y cantidades vendidos en esa venta). Piensa en qué pasa si el precio de un producto cambia mañana: ¿las ventas de hoy deberían cambiar con él?",
+          "concepts": ["entidades-relaciones-pk-fk", "precio-historico"],
+          "seedTables": [],
+          "invariants": [
+            {
+              "name": "historical-price-preserved",
+              "params": { "tableHint": "detalle", "columnHint": "precio" },
+              "failureMessage": "si Marta sube el precio de un producto mañana, las facturas de venta_detalle que solo guardan una FK al producto cambian de valor solas. Agrega una columna de precio propia en la tabla de detalle de venta.",
+              "successMessage": "el detalle de venta guarda su propio precio: subir el precio del producto mañana no altera facturas pasadas."
+            },
+            {
+              "name": "fk-integrity",
+              "failureMessage": "hay una llave foránea que no apunta a ninguna llave primaria existente. Revisa las referencias entre tablas.",
+              "successMessage": "todas las llaves foráneas apuntan a una llave primaria válida."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l2-normalizacion-sin-dogma",
+      "title": "Normalización sin dogma",
+      "narrative": "Normalizar no es una regla moral, es una respuesta a un problema concreto: cuando el mismo dato vive copiado en varios lugares, alguien eventualmente olvida actualizarlo en todos y el sistema empieza a mentir.\n\nLa primera forma normal (1FN) evita listas dentro de una celda. La segunda (2FN) evita que un dato dependa solo de parte de la llave. La tercera (3FN) evita que un dato dependa de otro dato que no es la llave. En la práctica, para el negocio de Marta, la pregunta útil es más simple: \"si este dato cambia, ¿debería cambiar en un solo lugar o en muchos?\". La dirección de un cliente debería vivir en un solo lugar. El precio que pagó por una compra, no: ese debe quedar congelado en la venta.\n\nDesnormalizar a propósito también es una decisión legítima, no un error: a veces se copia un dato por rendimiento, sabiendo exactamente el costo de sincronizarlo. El problema no es la copia, es la copia sin dueño.",
+      "concepts": ["normalizacion-3fn"],
+      "exercises": [
+        {
+          "id": "l2-bug-direccion-repetida",
+          "type": "bug-hunt",
+          "title": "El despacho que llegó a la dirección vieja",
+          "prompt": "Un cliente de Marta se mudó de local hace dos semanas y actualizó su dirección. Ayer le llegó un pedido a la dirección vieja. Encuentra el elemento del esquema responsable y la causa raíz.",
+          "concepts": ["normalizacion-3fn"],
+          "symptom": "el despacho de un pedido llegó a la dirección anterior del cliente, no a la que actualizó hace dos semanas.",
+          "artifact": {
+            "kind": "schema",
+            "content": "tabla clientes\n  id            uuid PK\n  nombre        string\n  direccion     string   -- se actualizó hace 2 semanas\n\ntabla pedidos\n  id            uuid PK\n  cliente_id    uuid FK -> clientes.id\n  direccion     string   -- copiada de clientes.direccion al crear el pedido\n  fecha         date\n\ntabla facturas\n  id            uuid PK\n  pedido_id     uuid FK -> pedidos.id\n  direccion     string   -- copiada de pedidos.direccion al facturar"
+          },
+          "culprits": [
+            { "elementId": "clientes.direccion", "label": "clientes.direccion" },
+            { "elementId": "pedidos.direccion", "label": "pedidos.direccion" },
+            { "elementId": "facturas.direccion", "label": "facturas.direccion" }
+          ],
+          "correctCulpritId": "pedidos.direccion",
+          "causeOptions": [
+            {
+              "id": "cause-denorm-sin-dueno",
+              "text": "la dirección está copiada en tres tablas sin un dueño único; al actualizarla en clientes, las copias en pedidos y facturas quedaron desactualizadas",
+              "isCorrect": true
+            },
+            {
+              "id": "cause-fk-rota",
+              "text": "falta una llave foránea entre pedidos y clientes",
+              "isCorrect": false
+            },
+            {
+              "id": "cause-tipo-dato",
+              "text": "la columna direccion debería ser de tipo texto largo en vez de string corto",
+              "isCorrect": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l3-kardex-costo-promedio",
+      "title": "Kárdex y costo promedio",
+      "narrative": "El inventario no es un número que se actualiza, es una historia que se acumula. Un kárdex es un libro contable de movimientos: cada entrada, salida o devolución es una fila nueva, nunca un `UPDATE stock SET cantidad = ...` sobre un valor existente.\n\n¿Por qué importa? Porque un `UPDATE` que reemplaza un valor pierde información y es vulnerable a que dos operaciones concurrentes se pisen: si dos personas leen el stock, calculan el nuevo valor y lo sobrescriben, la segunda escritura borra el efecto de la primera. Un movimiento que *suma* o *resta* sobre el saldo, en cambio, no pierde nada sin importar en qué orden concurran las operaciones.\n\nSobre ese kárdex se calcula el costo promedio ponderado: cada vez que entra mercancía a un costo distinto, el costo promedio del producto se recalcula con el nuevo lote, sin tocar el costo que ya se registró en movimientos pasados.",
+      "concepts": ["kardex-costo-promedio", "race-condition-lectura-escritura"],
+      "exercises": [
+        {
+          "id": "l3-schema-kardex",
+          "type": "schema-forge",
+          "title": "Modelar los movimientos de inventario",
+          "prompt": "Modela una tabla de movimientos de inventario para Distribuidora El Sol. Cada movimiento debe registrar el producto, el tipo (entrada, salida, devolución), la cantidad y el costo unitario en el momento del movimiento.",
+          "concepts": ["kardex-costo-promedio"],
+          "seedTables": [
+            {
+              "id": "productos",
+              "name": "productos",
+              "columns": [
+                { "id": "productos-id", "name": "id", "type": "uuid", "isPrimaryKey": true },
+                { "id": "productos-nombre", "name": "nombre", "type": "string" },
+                { "id": "productos-costo-actual", "name": "costo_promedio_actual", "type": "decimal" }
+              ]
+            }
+          ],
+          "invariants": [
+            {
+              "name": "historical-price-preserved",
+              "params": { "tableHint": "movimiento", "columnHint": "costo" },
+              "failureMessage": "si el costo promedio del producto cambia después, los movimientos viejos no deben mutar. Agrega una columna de costo propia en la tabla de movimientos.",
+              "successMessage": "cada movimiento guarda su propio costo unitario: el costo promedio del producto puede cambiar sin reescribir el historial."
+            },
+            {
+              "name": "fk-integrity",
+              "failureMessage": "hay una llave foránea que no apunta a ninguna llave primaria existente.",
+              "successMessage": "todas las llaves foráneas apuntan a una llave primaria válida."
+            }
+          ]
+        },
+        {
+          "id": "l3-timeline-kardex-vs-update",
+          "type": "timeline",
+          "title": "Kárdex contra UPDATE directo",
+          "prompt": "Dos operaciones concurrentes sobre el mismo producto: una venta de 20 unidades y una entrada de 50 unidades. `stock_directo` se actualiza a la manera del Excel de Marta (se lee el valor, se calcula y se sobrescribe). `kardex_saldo` se actualiza sumando cada movimiento sin leer nada antes. Ordena las operaciones como ocurrieron y predice el valor final de cada columna.",
+          "concepts": ["kardex-costo-promedio", "race-condition-lectura-escritura"],
+          "initialState": { "stock_directo": 100, "kardex_saldo": 100 },
+          "operations": [
+            {
+              "id": "a1-read",
+              "transactionId": "venta-20u",
+              "label": "venta lee stock_directo (100)",
+              "effect": { "kind": "read", "key": "stock_directo" }
+            },
+            {
+              "id": "a2-write",
+              "transactionId": "venta-20u",
+              "label": "venta escribe stock_directo = 80 (100 - 20)",
+              "effect": { "kind": "write", "key": "stock_directo", "value": 80, "mode": "set" }
+            },
+            {
+              "id": "a3-kardex",
+              "transactionId": "venta-20u",
+              "label": "venta registra movimiento kardex_saldo -20",
+              "effect": { "kind": "write", "key": "kardex_saldo", "value": -20, "mode": "delta" }
+            },
+            {
+              "id": "b1-read",
+              "transactionId": "entrada-50u",
+              "label": "entrada lee stock_directo (100, todavía no ve la venta)",
+              "effect": { "kind": "read", "key": "stock_directo" }
+            },
+            {
+              "id": "b2-write",
+              "transactionId": "entrada-50u",
+              "label": "entrada escribe stock_directo = 150 (100 + 50)",
+              "effect": { "kind": "write", "key": "stock_directo", "value": 150, "mode": "set" }
+            },
+            {
+              "id": "b3-kardex",
+              "transactionId": "entrada-50u",
+              "label": "entrada registra movimiento kardex_saldo +50",
+              "effect": { "kind": "write", "key": "kardex_saldo", "value": 50, "mode": "delta" }
+            }
+          ],
+          "expectedFinalState": { "stock_directo": 150, "kardex_saldo": 130 },
+          "isolationLevel": "read-committed"
+        }
+      ]
+    },
+    {
+      "id": "l4-multi-tenancy",
+      "title": "Multi-tenancy: una decisión de costo, no de pureza técnica",
+      "narrative": "Cuando el mismo sistema sirve a varios clientes, hay tres estrategias típicas: una columna `tenant_id` compartida en las mismas tablas, un esquema de base de datos separado por cliente, o una base de datos completa por cliente.\n\nCada una es \"más correcta\" en algún eje: aislamiento, cumplimiento normativo, facilidad de hacer backup por cliente. Pero ese eje solo importa si el cliente lo necesita. Para Marta, con 3 empleados y un presupuesto ajustado, la pregunta no es \"¿qué aísla mejor los datos?\", es \"¿qué puedo pagar mantener?\".",
+      "concepts": ["multi-tenancy-tenant-id"],
+      "exercises": [
+        {
+          "id": "l4-tradeoff-multitenancy",
+          "type": "tradeoff-matrix",
+          "title": "Elegir la estrategia de multi-tenancy para El Sol",
+          "prompt": "Distribuidora El Sol es hoy un solo cliente, pero Marta quiere ofrecer el sistema a otras distribuidoras amigas más adelante. Elige la estrategia de multi-tenancy y las dos razones que la sustentan para este caso concreto.",
+          "concepts": ["multi-tenancy-tenant-id"],
+          "requiredJustificationCount": 2,
+          "options": [
+            { "id": "opt-tenant-id", "label": "tenant_id compartido en las mismas tablas", "isCorrect": true },
+            { "id": "opt-schema-per-client", "label": "un esquema de base de datos por cliente", "isCorrect": false },
+            { "id": "opt-db-per-client", "label": "una base de datos completa por cliente", "isCorrect": false }
+          ],
+          "justifications": [
+            {
+              "id": "j-costo-operativo",
+              "text": "una sola base de datos es más barata de operar y respaldar para un equipo de 3 personas",
+              "kind": "correct"
+            },
+            {
+              "id": "j-mantenimiento-simple",
+              "text": "las migraciones y el mantenimiento se hacen una sola vez, no una vez por cliente",
+              "kind": "correct"
+            },
+            {
+              "id": "j-soc2",
+              "text": "aísla mejor los datos ante una auditoría SOC2 o similar",
+              "kind": "true-but-irrelevant"
+            },
+            {
+              "id": "j-latencia-regional",
+              "text": "permite ubicar la base de datos de cada cliente en una región distinta para reducir latencia",
+              "kind": "true-but-irrelevant"
+            },
+            {
+              "id": "j-nunca-crece",
+              "text": "el negocio de Marta nunca va a crecer más allá de un solo cliente",
+              "kind": "false"
+            },
+            {
+              "id": "j-unica-opcion-backup",
+              "text": "es la única estrategia que permite hacer respaldos",
+              "kind": "false"
+            },
+            {
+              "id": "j-mas-segura-siempre",
+              "text": "una base de datos por cliente es siempre más segura, sin excepción",
+              "kind": "false"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l5-cierre-marta",
+      "title": "Cierre: defender el modelo frente a Marta",
+      "narrative": "Modelar bien no sirve de nada si no puedes defender por qué te tomó dos semanas y por qué cuesta más que la opción barata. Marta no necesita entender qué es una tercera forma normal; necesita entender que no va a perder plata otra vez.",
+      "concepts": ["comunicacion-costo-riesgo-negocio"],
+      "exercises": [
+        {
+          "id": "l5-client-arena-marta",
+          "type": "client-arena",
+          "title": "Marta pregunta por qué no es como el Excel",
+          "prompt": "Defiende el diseño frente a Marta sin perder el negocio ni construir algo que se vuelva a romper.",
+          "concepts": ["comunicacion-costo-riesgo-negocio"],
+          "initialMarkers": { "budget": 100, "trust": 50, "techDebt": 0 },
+          "startNodeId": "n-intro",
+          "nodes": [
+            {
+              "id": "n-intro",
+              "type": "multiple-choice",
+              "clientLine": "Llevas dos semanas dibujando cuadritos y todavía no veo mi inventario. ¿Por qué no lo haces como el Excel pero en la web? Eso me lo cotizaron en la tercera parte.",
+              "choices": [
+                {
+                  "id": "c-explicar-incidente",
+                  "text": "explicarle que \"como el Excel\" fue exactamente lo que le costó 2.3 millones el mes pasado",
+                  "deltas": { "trust": 10 },
+                  "nextNodeId": "n-budget"
+                },
+                {
+                  "id": "c-aceptar-atajo",
+                  "text": "aceptar acortar camino y modelarlo más parecido a una hoja de cálculo",
+                  "deltas": { "techDebt": 25, "trust": -5 },
+                  "nextNodeId": "n-budget"
+                },
+                {
+                  "id": "c-decir-no-sin-explicar",
+                  "text": "decirle que no se puede, sin explicar por qué",
+                  "deltas": { "trust": -15 },
+                  "nextNodeId": "n-budget"
+                }
+              ]
+            },
+            {
+              "id": "n-budget",
+              "type": "multiple-choice",
+              "clientLine": "Está bien, pero el otro proveedor me cobra la tercera parte y en dos semanas. ¿Por qué ustedes se demoran más?",
+              "choices": [
+                {
+                  "id": "c-justificar-costo",
+                  "text": "explicar que ese precio no incluye lo que ya le pasó: el kárdex y el precio histórico cuestan tiempo, pero evitan ese tipo de pérdida",
+                  "deltas": { "trust": 10, "budget": -5 },
+                  "nextNodeId": "n-final"
+                },
+                {
+                  "id": "c-descuento-recorte",
+                  "text": "ofrecer un descuento y recortar el modelo para igualar el precio del otro proveedor",
+                  "deltas": { "budget": 20, "techDebt": 20, "trust": -5 },
+                  "nextNodeId": "n-final"
+                },
+                {
+                  "id": "c-pedir-tiempo",
+                  "text": "pedir más tiempo sin justificar el costo",
+                  "deltas": { "trust": -10 },
+                  "nextNodeId": "n-final"
+                }
+              ]
+            },
+            {
+              "id": "n-final",
+              "type": "free-response",
+              "clientLine": "Ok, pero necesito que esto tenga sentido para mí, no para otro programador. ¿Por qué debería pagar más por esto que por la otra opción?",
+              "rubric": [
+                {
+                  "id": "r-riesgo-negocio",
+                  "description": "traduce el costo técnico del modelo (precio histórico, kárdex) a un riesgo de negocio concreto para Marta",
+                  "weight": 4
+                },
+                {
+                  "id": "r-ancla-incidente",
+                  "description": "usa el incidente de los 2.3 millones como ancla del argumento",
+                  "weight": 3
+                },
+                {
+                  "id": "r-sin-jerga",
+                  "description": "no usa jerga técnica sin traducirla a algo que Marta, sin formación técnica, pueda entender",
+                  "weight": 3
+                }
+              ],
+              "fallbackChoices": [
+                {
+                  "id": "fb-riesgo-claro",
+                  "text": "Marta, esto es justo lo que evita que te vuelva a pasar lo de los 2.3 millones: cada venta guarda su propio precio, así que si mañana cambias un precio, tus facturas viejas no se mueven solas. Eso es lo que estás pagando.",
+                  "deltas": {},
+                  "nextNodeId": "n-final"
+                },
+                {
+                  "id": "fb-jerga",
+                  "text": "Es que la base de datos relacional sigue la tercera forma normal y usa un kárdex inmutable, por eso cuesta más que una hoja de cálculo.",
+                  "deltas": {},
+                  "nextNodeId": "n-final"
+                },
+                {
+                  "id": "fb-confianza-ciega",
+                  "text": "Confía en mí, en un par de meses lo vas a agradecer.",
+                  "deltas": {},
+                  "nextNodeId": "n-final"
+                }
+              ]
+            },
+            {
+              "id": "end-confianza-alta",
+              "type": "ending",
+              "condition": { "metric": "trust", "operator": "gte", "value": 70 },
+              "text": "Marta entiende el riesgo y aprueba el presupuesto completo. El proyecto sigue con precio histórico y kárdex intactos, sin atajos."
+            },
+            {
+              "id": "end-deuda-alta",
+              "type": "ending",
+              "condition": { "metric": "techDebt", "operator": "gte", "value": 40 },
+              "text": "Marta acepta el precio más bajo, pero el sistema queda con atajos: sin precio histórico, sin kárdex real. El problema del Excel va a volver a pasar en unos meses."
+            },
+            {
+              "id": "end-neutral",
+              "type": "ending",
+              "text": "Marta aprueba el proyecto, pero sigue sin estar del todo convencida del costo. Vas a tener que seguir defendiendo estas decisiones más adelante."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
