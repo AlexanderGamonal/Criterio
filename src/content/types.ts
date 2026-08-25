@@ -99,8 +99,9 @@ export interface TimelineOperation {
   effect: {
     kind: 'read' | 'write';
     key: string;
-    /** Para 'write': valor o expresión simple, p.ej. "-5" para restar 5. */
     value?: string | number;
+    /** 'delta' suma `value` al estado actual; 'set' lo reemplaza. Default: 'set'. */
+    mode?: 'set' | 'delta';
   };
 }
 
