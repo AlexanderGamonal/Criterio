@@ -1,4 +1,4 @@
-import { CURRENT_SCHEMA_VERSION, createEmptyState, type PersistedState } from './types';
+import { CURRENT_SCHEMA_VERSION, DEFAULT_DAILY_REVIEW_SIZE, createEmptyState, type PersistedState } from './types';
 
 const STORAGE_KEY = 'criterio:progress';
 
@@ -8,10 +8,16 @@ const STORAGE_KEY = 'criterio:progress';
  * se descarta ese fragmento en vez de romper la carga completa.
  */
 const migrations: Record<number, (state: any) => any> = {
-  // 0 -> 1: no-op de ejemplo para cuando exista una v0 real en el futuro.
+  // v1 -> v2: se agregó settings.dailyReviewSize (tamaño del bloque de repaso).
+  // Guardados de v1 no lo tienen: se completa con el default sin tocar nada más.
+  1: (state) => ({
+    ...state,
+    schemaVersion: 2,
+    settings: { ...state.settings, dailyReviewSize: DEFAULT_DAILY_REVIEW_SIZE },
+  }),
 };
 
-function migrate(raw: any): PersistedState {
+export function migrateState(raw: any): PersistedState {
   let state = raw;
   let version = typeof state?.schemaVersion === 'number' ? state.schemaVersion : 0;
 
@@ -37,6 +43,11 @@ function coerceToCurrentShape(raw: any): PersistedState {
   const base = createEmptyState();
   if (!raw || typeof raw !== 'object') return base;
 
+  const dailyReviewSize =
+    typeof raw.settings?.dailyReviewSize === 'number' && raw.settings.dailyReviewSize > 0
+      ? raw.settings.dailyReviewSize
+      : base.settings.dailyReviewSize;
+
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     concepts: raw.concepts && typeof raw.concepts === 'object' ? raw.concepts : base.concepts,
@@ -46,6 +57,7 @@ function coerceToCurrentShape(raw: any): PersistedState {
         raw.settings?.llmProvider === 'gemini' || raw.settings?.llmProvider === 'groq'
           ? raw.settings.llmProvider
           : base.settings.llmProvider,
+      dailyReviewSize,
     },
   };
 }
@@ -55,7 +67,16 @@ export function loadState(): PersistedState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return createEmptyState();
-    return migrate(JSON.parse(raw));
+
+    const parsed = JSON.parse(raw);
+    const migrated = migrateState(parsed);
+    // Si el guardado no estaba ya en la versión actual, persiste la forma
+    // migrada de inmediato: así no queda en un esquema viejo hasta la
+    // próxima acción del usuario.
+    if (parsed?.schemaVersion !== CURRENT_SCHEMA_VERSION) {
+      saveState(migrated);
+    }
+    return migrated;
   } catch {
     return createEmptyState();
   }

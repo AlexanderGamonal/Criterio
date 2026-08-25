@@ -41,7 +41,9 @@ export interface ConceptProgress {
 // Estado persistido
 // ---------------------------------------------------------------------------
 
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
+
+export const DEFAULT_DAILY_REVIEW_SIZE = 5;
 
 export interface PersistedState {
   schemaVersion: number;
@@ -51,6 +53,8 @@ export interface PersistedState {
   /** Config de usuario: proveedor LLM elegido, no la API key (esa va aparte). */
   settings: {
     llmProvider: 'mock' | 'gemini' | 'groq';
+    /** Tamaño del bloque de repaso al abrir sesión (spec: 3-5 ítems). Desde v2. */
+    dailyReviewSize: number;
   };
 }
 
@@ -59,6 +63,6 @@ export function createEmptyState(): PersistedState {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     concepts: {},
     history: [],
-    settings: { llmProvider: 'mock' },
+    settings: { llmProvider: 'mock', dailyReviewSize: DEFAULT_DAILY_REVIEW_SIZE },
   };
 }

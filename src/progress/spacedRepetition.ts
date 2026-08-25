@@ -1,17 +1,17 @@
 import type { ConceptProgress, PersistedState } from './types';
 
 const DEFAULT_MIN_ITEMS = 3;
-const DEFAULT_MAX_ITEMS = 5;
 
 /**
  * Selecciona los conceptos para el bloque de repaso al abrir sesión.
  * Solo conceptos en 'practicando' con repaso vencido (dueAt <= now) son elegibles.
  * Prioriza fallos recientes y luego más días sin tocarse.
+ * `maxItems` por defecto viene de settings.dailyReviewSize (configurable, spec: 3-5 ítems).
  */
 export function selectReviewItems(
   state: PersistedState,
   now: number = Date.now(),
-  maxItems: number = DEFAULT_MAX_ITEMS,
+  maxItems: number = state.settings.dailyReviewSize,
 ): ConceptProgress[] {
   const due = Object.values(state.concepts).filter(
     (c) => c.level === 'practicando' && c.spacedRepetition.dueAt !== null && c.spacedRepetition.dueAt <= now,

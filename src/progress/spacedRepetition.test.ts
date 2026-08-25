@@ -81,4 +81,20 @@ describe('selectReviewItems', () => {
     }
     expect(selectReviewItems(stateWith(concepts), now, 5).length).toBe(5);
   });
+
+  it('sin maxItems explícito, usa settings.dailyReviewSize del estado (configurable por el usuario)', () => {
+    const concepts: Record<string, ConceptProgress> = {};
+    for (let i = 0; i < 10; i++) {
+      concepts[`c${i}`] = concept({
+        conceptId: `c${i}`,
+        spacedRepetition: { intervalIndex: 0, dueAt: now - 1, recentFailures: 0 },
+      });
+    }
+    const state: PersistedState = {
+      ...createEmptyState(),
+      concepts,
+      settings: { llmProvider: 'mock', dailyReviewSize: 3 },
+    };
+    expect(selectReviewItems(state, now).length).toBe(3);
+  });
 });
