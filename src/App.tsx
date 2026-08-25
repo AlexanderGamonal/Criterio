@@ -18,6 +18,15 @@ type Route =
   | { screen: 'module'; moduleId: string }
   | { screen: 'lesson'; moduleId: string; lessonId: string };
 
+function findLessonForConcept(conceptId: string): { moduleId: string; lessonId: string } | null {
+  for (const module of MODULES) {
+    for (const lesson of module.lessons) {
+      if (lesson.concepts.includes(conceptId)) return { moduleId: module.id, lessonId: lesson.id };
+    }
+  }
+  return null;
+}
+
 export default function App() {
   const [route, setRoute] = useState<Route>({ screen: 'map' });
   const [completedExerciseIds, setCompletedExerciseIds] = useState<Set<string>>(new Set());
@@ -31,6 +40,11 @@ export default function App() {
   function handleExerciseResult(result: ExerciseResult) {
     setState((prev) => applyExerciseResult(prev, result));
     setCompletedExerciseIds((prev) => new Set(prev).add(result.exerciseId));
+  }
+
+  function handleOpenConcept(conceptId: string) {
+    const location = findLessonForConcept(conceptId);
+    if (location) setRoute({ screen: 'lesson', ...location });
   }
 
   if (dueItems.length > 0) {
@@ -51,7 +65,7 @@ export default function App() {
 
     if (route.screen === 'module') {
       const module = MODULES.find((m) => m.id === route.moduleId);
-      if (!module) return <MasteryMap modules={MODULES} state={state} onOpenModule={(id) => setRoute({ screen: 'module', moduleId: id })} />;
+      if (!module) return <MasteryMap modules={MODULES} state={state} onOpenModule={(id) => setRoute({ screen: 'module', moduleId: id })} onOpenConcept={handleOpenConcept} />;
       return (
         <ModuleScreen
           module={module}
@@ -64,7 +78,7 @@ export default function App() {
     if (route.screen === 'lesson') {
       const module = MODULES.find((m) => m.id === route.moduleId);
       const lesson = module?.lessons.find((l) => l.id === route.lessonId);
-      if (!module || !lesson) return <MasteryMap modules={MODULES} state={state} onOpenModule={(id) => setRoute({ screen: 'module', moduleId: id })} />;
+      if (!module || !lesson) return <MasteryMap modules={MODULES} state={state} onOpenModule={(id) => setRoute({ screen: 'module', moduleId: id })} onOpenConcept={handleOpenConcept} />;
       return (
         <LessonScreen
           lesson={lesson}
@@ -76,7 +90,7 @@ export default function App() {
       );
     }
 
-    return <MasteryMap modules={MODULES} state={state} onOpenModule={(id) => setRoute({ screen: 'module', moduleId: id })} />;
+    return <MasteryMap modules={MODULES} state={state} onOpenModule={(id) => setRoute({ screen: 'module', moduleId: id })} onOpenConcept={handleOpenConcept} />;
   }
 
   return (

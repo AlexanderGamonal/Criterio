@@ -8,6 +8,7 @@ interface MasteryMapProps {
   modules: Module[];
   state: PersistedState;
   onOpenModule: (moduleId: string) => void;
+  onOpenConcept: (conceptId: string) => void;
 }
 
 const LEVEL_CLASS: Record<string, string> = {
@@ -16,7 +17,7 @@ const LEVEL_CLASS: Record<string, string> = {
   consolidado: 'bg-verdin/20 text-verdin border border-verdin/50',
 };
 
-export function MasteryMap({ modules, state, onOpenModule }: MasteryMapProps) {
+export function MasteryMap({ modules, state, onOpenModule, onOpenConcept }: MasteryMapProps) {
   return (
     <div className="space-y-8">
       <div>
@@ -54,13 +55,15 @@ export function MasteryMap({ modules, state, onOpenModule }: MasteryMapProps) {
                   {concepts.map((concept) => {
                     const level = state.concepts[concept.id]?.level ?? 'nuevo';
                     return (
-                      <span
+                      <button
                         key={concept.id}
-                        title={concept.name}
-                        className={`text-xs font-mono px-2 py-1 rounded ${LEVEL_CLASS[level]}`}
+                        type="button"
+                        title={`ir a la lección de "${concept.name}"`}
+                        onClick={() => onOpenConcept(concept.id)}
+                        className={`text-xs font-mono px-2 py-1 rounded hover:brightness-125 transition-[filter] ${LEVEL_CLASS[level]}`}
                       >
                         {concept.name}
-                      </span>
+                      </button>
                     );
                   })}
                 </div>
