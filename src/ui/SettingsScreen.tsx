@@ -70,13 +70,13 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
             </button>
           </div>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="password"
               value={draftKey}
               onChange={(e) => setDraftKey(e.target.value)}
               placeholder="pega tu clave aquí"
-              className="flex-1 bg-pliego border border-grafito/30 rounded px-3 py-2 text-papel font-mono text-sm"
+              className="flex-1 min-w-0 bg-pliego border border-grafito/30 rounded px-3 py-2 text-papel font-mono text-sm"
             />
             <button
               type="button"

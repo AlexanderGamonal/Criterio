@@ -24,9 +24,9 @@ function MarkerBar({ markers }: { markers: ClientArenaMarkers }) {
     { label: 'deuda técnica', value: markers.techDebt },
   ];
   return (
-    <div className="flex gap-4 font-mono text-sm border border-grafito/30 rounded px-4 py-2 bg-pliego">
+    <div className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-sm border border-grafito/30 rounded px-4 py-2 bg-pliego">
       {items.map((item) => (
-        <div key={item.label} className="flex items-baseline gap-1.5">
+        <div key={item.label} className="flex items-baseline gap-1.5 whitespace-nowrap">
           <span className="text-grafito">{item.label}</span>
           <span className="text-laton">{item.value}</span>
         </div>

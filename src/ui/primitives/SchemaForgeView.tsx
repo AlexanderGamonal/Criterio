@@ -100,13 +100,14 @@ export function SchemaForgeView({ exercise, onComplete }: SchemaForgeViewProps) 
               </button>
             </div>
 
-            <table className="w-full text-sm font-mono">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[520px] text-sm font-mono">
               <thead>
                 <tr className="text-grafito text-xs uppercase text-left">
                   <th className="font-normal pb-1">columna</th>
                   <th className="font-normal pb-1">tipo</th>
                   <th className="font-normal pb-1">pk</th>
-                  <th className="font-normal pb-1">fk hacia</th>
+                  <th className="font-normal pb-1 whitespace-nowrap">fk hacia</th>
                   <th className="font-normal pb-1"></th>
                 </tr>
               </thead>
@@ -177,6 +178,7 @@ export function SchemaForgeView({ exercise, onComplete }: SchemaForgeViewProps) 
                 ))}
               </tbody>
             </table>
+            </div>
 
             <button
               type="button"

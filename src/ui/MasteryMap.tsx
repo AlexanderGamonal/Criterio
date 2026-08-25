@@ -31,12 +31,12 @@ export function MasteryMap({ modules, state, onOpenModule }: MasteryMapProps) {
           const concepts = CONCEPTS.filter((c) => moduleConceptIds.has(c.id));
 
           return (
-            <div key={module.id} className="border border-grafito/30 rounded p-4 bg-pliego">
+            <div key={module.id} className={`border border-grafito/30 rounded p-4 bg-pliego ${!unlocked ? 'opacity-60' : ''}`}>
               <button
                 type="button"
                 disabled={!unlocked}
                 onClick={() => onOpenModule(module.id)}
-                className="w-full text-left flex items-center justify-between gap-3 disabled:cursor-not-allowed"
+                className="w-full text-left flex items-start justify-between gap-3 disabled:cursor-not-allowed"
               >
                 <div>
                   <h2 className="font-display text-lg text-papel">{module.title}</h2>
@@ -46,7 +46,7 @@ export function MasteryMap({ modules, state, onOpenModule }: MasteryMapProps) {
                     <p className="text-grafito text-sm">{concepts.length} conceptos</p>
                   )}
                 </div>
-                {!unlocked && <Lock className="text-grafito shrink-0" size={18} />}
+                {!unlocked && <Lock className="text-grafito shrink-0 mt-1" size={18} />}
               </button>
 
               {unlocked && concepts.length > 0 && (
