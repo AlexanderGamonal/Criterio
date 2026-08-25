@@ -10,6 +10,7 @@ import { ModuleScreen } from './ui/ModuleScreen';
 import { LessonScreen } from './ui/LessonScreen';
 import { SettingsScreen } from './ui/SettingsScreen';
 import { ReviewGate } from './ui/ReviewGate';
+import { loadRoute, saveRoute } from './ui/routePersistence';
 import type { ExerciseResult } from './progress/types';
 
 type Route =
@@ -27,9 +28,28 @@ function findLessonForConcept(conceptId: string): { moduleId: string; lessonId: 
   return null;
 }
 
+/** Valida la ruta guardada: campos faltantes o corruptos caen de vuelta al mapa. */
+function toValidRoute(stored: ReturnType<typeof loadRoute>): Route {
+  if (!stored) return { screen: 'map' };
+  if (stored.screen === 'settings') return { screen: 'settings' };
+  if (stored.screen === 'module' && stored.moduleId) return { screen: 'module', moduleId: stored.moduleId };
+  if (stored.screen === 'lesson' && stored.moduleId && stored.lessonId) {
+    return { screen: 'lesson', moduleId: stored.moduleId, lessonId: stored.lessonId };
+  }
+  return { screen: 'map' };
+}
+
 export default function App() {
-  const [route, setRoute] = useState<Route>({ screen: 'map' });
+  // Recuerda la pantalla actual: si el navegador descarga la pestaña en
+  // segundo plano (frecuente en Android con poca batería) y la recarga,
+  // el usuario vuelve a donde estaba en vez de al mapa.
+  const [route, setRouteState] = useState<Route>(() => toValidRoute(loadRoute()));
   const [completedExerciseIds, setCompletedExerciseIds] = useState<Set<string>>(new Set());
+
+  function setRoute(next: Route) {
+    setRouteState(next);
+    saveRoute(next);
+  }
 
   const state = useProgressStore((s) => s.state);
   const setState = useProgressStore((s) => s.setState);
